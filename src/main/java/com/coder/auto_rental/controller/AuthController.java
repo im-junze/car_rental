@@ -69,7 +69,7 @@ public class AuthController {
     }
 
 //    获取用户信息  反馈给前端vo中的
-    @GetMapping("/info")
+    @GetMapping("/getInfo")
     public Result getInfo(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication==null){
