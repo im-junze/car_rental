@@ -90,6 +90,7 @@ public class AuthController {
                 filter(Objects::nonNull).
                 map(Permission::getPermissionCode).toArray();
 
+
         UserInfoVo userInfoVo = new UserInfoVo(user.getId(), user.getUsername(),
                 user.getAvatar(), user.getNickname(), array);
         return Result.success(userInfoVo).setMessage("获取成功");
