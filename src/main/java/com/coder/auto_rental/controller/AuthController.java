@@ -17,15 +17,20 @@ import com.coder.auto_rental.vo.TokenVo;
 import com.coder.auto_rental.vo.UserInfoVo;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/auto_rental/auth")
@@ -34,6 +39,7 @@ public class AuthController {
     private RedisUtils redisUtils;
     @Resource
     private IUserService userService;
+
     @PostMapping("/refreshToken")
     public Result<TokenVo> refreshToken(HttpServletRequest request) {
         String token = request.getHeader("token");
@@ -50,8 +56,8 @@ public class AuthController {
                     put("username", userDetails.getUsername());
                 }
             };
-              newToken = JwtUtils.createToken(map);
-        }else{
+            newToken = JwtUtils.createToken(map);
+        } else {
             throw new CustomAuthenticationException("token数据异常");
         }
 //   获取本次国企时间，并延长
@@ -62,32 +68,39 @@ public class AuthController {
         tokenVo.setExpireTime(expireTime);
         tokenVo.setToken(newToken);
 //        清楚原有token
-        redisUtils.del("token:"+token);
+        redisUtils.del("token:" + token);
         long nowTime = DateTime.now().getTime();
-        redisUtils.set("token:"+newToken,newToken,(expireTime-nowTime)/1000 );
-        return  Result.success(tokenVo).setMessage("刷新token成功");
+        redisUtils.set("token:" + newToken, newToken, (expireTime - nowTime) / 1000);
+        return Result.success(tokenVo).setMessage("刷新token成功");
     }
 
-//    获取用户信息  反馈给前端vo中的
+    //    获取用户信息  反馈给前端vo中的
     @GetMapping("/getInfo")
-    public Result getInfo(){
+    public Result getInfo() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication==null){
+        if (authentication == null) {
             return Result.fail().setMessage("认证信息为空");
         }
         User user = (User) authentication.getPrincipal();
-       List<String>list = userService.selectRoleName(user.getId());
-        Object[] array = list.toArray();
-        UserInfoVo userInfoVo = new UserInfoVo(user.getId(),user.getUsername(),
-                user.getAvatar(),user.getNickname(),array);
+
+//       List<String>list = userService.selectRoleName(user.getId());
+//        Object[] array = list.toArray();
+        List<Permission> permissionList = user.getPermissionList();
+        Object[] array = permissionList.stream().
+                filter(Objects::nonNull).
+                map(Permission::getPermissionCode).toArray();
+
+        UserInfoVo userInfoVo = new UserInfoVo(user.getId(), user.getUsername(),
+                user.getAvatar(), user.getNickname(), array);
         return Result.success(userInfoVo).setMessage("获取成功");
 
     }
-//获取菜单
+
+    //获取菜单
     @GetMapping("/menuList")
-    public Result getMenuList(){
+    public Result getMenuList() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication==null){
+        if (authentication == null) {
             return Result.fail().setMessage("认证信息为空");
         }
         User user = (User) authentication.getPrincipal();
@@ -96,8 +109,8 @@ public class AuthController {
 
         for (int i = 0; i < permissionList.size(); i++) {
             Permission permission = permissionList.get(i);
-            if (permission==null){
-                permissionList.remove(i) ;
+            if (permission == null) {
+                permissionList.remove(i);
                 i--;
             }
         }
@@ -107,6 +120,22 @@ public class AuthController {
         return Result.success(routeVos).setMessage("获取菜单成功");
 
 
+    }
+
+    @PostMapping("logout")
+    public Result getLogout(HttpServletRequest request, HttpServletResponse response) {
+        String token = request.getHeader("token");
+        if (StrUtil.isEmpty(token)) {
+            token = request.getParameter("token");
+        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            redisUtils.del("token:" + token);
+            SecurityContextLogoutHandler securityContextLogoutHandler = new SecurityContextLogoutHandler();
+            securityContextLogoutHandler.logout(request, response, authentication);
+            return Result.success().setMessage("退出成功");
+        }
+        return Result.fail().setMessage("退出失败");
 
     }
 
