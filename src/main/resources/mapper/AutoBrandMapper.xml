@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.coder.auto_rental.mapper.AutoBrandMapper">
-
+    <select id="searchByPage" resultType="autoBrand">
+        select m.name makername
+             ,b.id,b.brand_name,b.mid from auto_brand b,auto_maker
+        m where b.mid=m.id
+        <if test="autoBrand.mid!=null">and b.mid=#{autoBrand.mid}</if>
+        <if test="autoBrand.brandName!=null and autoBrand.brandName!=''">and b.brand_name like
+            concat('%',#{autoBrand.brandName},'%')
+        </if>
+        and b.deleted=0
+          order by m.order_letter
+    </select>
 </mapper>

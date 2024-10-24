@@ -2,6 +2,7 @@ package com.coder.auto_rental.controller;
 
 import cn.hutool.extra.pinyin.PinyinUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.coder.auto_rental.entity.AutoBrand;
 import com.coder.auto_rental.entity.AutoMaker;
 import com.coder.auto_rental.service.IAutoMakerService;
 import com.coder.auto_rental.utils.PinYinUtils;
@@ -53,5 +54,10 @@ public class AutoMakerController {
     public Result update(@RequestBody AutoMaker autoMaker){
         autoMaker.setOrderLetter(PinYinUtils.getPinYin(autoMaker.getName()));
         return autoMakerAutoMakerService.updateById(autoMaker)?Result.success():Result.fail();
+    }
+    @GetMapping
+    public Result selectAll(){
+        List<AutoMaker> list = autoMakerAutoMakerService.list();
+        return Result.success().setData(list);
     }
 }
